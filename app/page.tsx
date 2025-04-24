@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Button } from "./components/ui/button";
+import { Button } from "../components/ui/button";
 
 const supabase = createClient(
   'https://otlixcdsstrdwxhzddrz.supabase.co',
