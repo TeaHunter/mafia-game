@@ -40,7 +40,7 @@ const roleInfo = {
 export default function Home() {
   const [players, setPlayers] = useState([]);
   const [assigned, setAssigned] = useState(false);
-  const [myRole, setMyRole] = useState(null);
+  const [myRole, setMyRole] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [gameId, setGameId] = useState(1);
   const [phase, setPhase] = useState<'day' | 'night'>('day');
@@ -73,20 +73,13 @@ export default function Home() {
   const getRandomUnassignedRole = () => {
     const roles = [
       "Mafia Boss",
-      "Mafioso",
-      "Mafioso",
+      "Mafioso", "Mafioso",
       "Sheriff",
       "Doctor",
       "Maniac",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson"
+      "Townsperson", "Townsperson", "Townsperson",
+      "Townsperson", "Townsperson", "Townsperson",
+      "Townsperson", "Townsperson", "Townsperson"
     ];
     const usedRoles = players.map(p => p.role);
     const availableRoles = roles.filter(role => !usedRoles.includes(role));
@@ -139,4 +132,13 @@ export default function Home() {
         <div className="text-center">
           {myRole && roleInfo[myRole] && (
             <div className="flex flex-col items-center">
-              <div className="text-6xl mb-4">{roleInfo[myRole].icon
+              <div className="text-6xl mb-4">{roleInfo[myRole].icon}</div>
+              <h2 className="text-4xl font-bold mb-2">{myRole}</h2>
+              <p className="text-lg max-w-xs leading-relaxed">{roleInfo[myRole].description}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
