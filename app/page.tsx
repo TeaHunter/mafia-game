@@ -59,9 +59,10 @@ export default function Home() {
     const subscription = supabase
       .channel('games-phase')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
-        if (payload.new && payload.new.phase) {
-          setPhase(payload.new.phase);
-        }
+        if (payload.new) {
+  const data = payload.new as { phase: 'day' | 'night' };
+  setPhase(data.phase);
+}
       })
       .subscribe();
 
