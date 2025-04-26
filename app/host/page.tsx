@@ -62,8 +62,13 @@ export default function HostPage() {
   };
 
   const startNewGame = async () => {
+    // Удаляем всех старых игроков
+    await supabase.from('players').delete().eq('game_id', gameId);
+
+    // Создаём новую игру
     const newGameId = gameId + 1;
     await supabase.from('games').insert({ game_number: newGameId, phase: 'day', status: 'waiting' });
+
     setGameId(newGameId);
     setPhase('day');
     setStatus('waiting');
@@ -126,11 +131,11 @@ export default function HostPage() {
             <Button onClick={startNewGame} className="bg-blue-600">New Game</Button>
           </div>
 
-          <div className="bg-white text-black rounded p-4">
+          <div className="bg-white text-black rounded p-4 mt-4">
             <h2 className="text-lg font-bold mb-2">Players</h2>
-            <ul>
+            <ul className="space-y-1">
               {players.map(p => (
-                <li key={p.id} className="text-left mb-1"><strong>{p.name}</strong>: {p.role}</li>
+                <li key={p.id} className="text-left"><strong>{p.name}</strong>: {p.role}</li>
               ))}
             </ul>
           </div>
