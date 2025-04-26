@@ -34,8 +34,9 @@ export default function HostPage() {
         .channel('games')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
           if (payload.new) {
-            setPhase(payload.new.phase);
-            setStatus(payload.new.status);
+            const data = payload.new as { phase: 'day' | 'night'; status: string };
+            setPhase(data.phase);
+            setStatus(data.status);
           }
         })
         .subscribe();
