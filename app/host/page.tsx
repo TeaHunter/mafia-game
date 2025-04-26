@@ -10,140 +10,129 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90bGl4Y2Rzc3RyZHd4aHpkZHJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1MjMxMDAsImV4cCI6MjA2MTA5OTEwMH0.F_Kb7KEbNCbTSXI5f_e3VUBb_z1SRnh7VoXCAxvU5t0'
 );
 
-const roleInfo = {
-  "Mafia Boss": {
-    icon: "🕴️",
-    description: "Mafia Boss: Each night chooses a player to eliminate. During the day, blends in and votes with others. Wins if the mafia outnumbers the town."
-  },
-  "Mafioso": {
-    icon: "🧥",
-    description: "Mafioso: Helps the boss eliminate targets. Votes during the day. Wins with the mafia when the town is outnumbered."
-  },
-  "Sheriff": {
-    icon: "👮",
-    description: "Sheriff: Investigates one player each night to reveal if they are mafia. Wins with the town if all mafia members are eliminated."
-  },
-  "Doctor": {
-    icon: "🏥",
-    description: "Doctor: Protects one player each night from elimination. Wins with the town if all mafia members are eliminated."
-  },
-  "Maniac": {
-    icon: "🗡️",
-    description: "Maniac: Each night eliminates a player. Wins if left one-on-one against a Townsperson."
-  },
-  "Townsperson": {
-    icon: "🧑",
-    description: "Townsperson: No night abilities. Discusses and votes during the day. Wins with the town if all mafia members are eliminated."
-  }
-};
-
-export default function Home() {
+export default function HostPage() {
+  const [password, setPassword] = useState('');
+  const [authorized, setAuthorized] = useState(false);
   const [players, setPlayers] = useState([]);
-  const [assigned, setAssigned] = useState(false);
-  const [myRole, setMyRole] = useState(null);
-  const [name, setName] = useState("");
   const [gameId, setGameId] = useState(1);
   const [phase, setPhase] = useState<'day' | 'night'>('day');
+  const [status, setStatus] = useState<'waiting' | 'in_progress' | 'completed'>('waiting');
 
   useEffect(() => {
-    const savedName = localStorage.getItem('name');
-    const savedRole = localStorage.getItem('role');
-    if (savedName && savedRole) {
-      setName(savedName);
-      setMyRole(savedRole);
-      setAssigned(true);
+    if (authorized) {
+      loadPlayers();
+      loadGameInfo();
+
+      const playerSub = supabase
+        .channel('players')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload) => {
+          loadPlayers();
+        })
+        .subscribe();
+
+      const gameSub = supabase
+        .channel('games')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
+          if (payload.new) {
+            setPhase(payload.new.phase);
+            setStatus(payload.new.status);
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(playerSub);
+        supabase.removeChannel(gameSub);
+      };
     }
-  }, []);
+  }, [authorized, gameId]);
 
-  useEffect(() => {
-    const subscription = supabase
-      .channel('games-phase')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
-        if (payload.new && payload.new.phase) {
-          setPhase(payload.new.phase);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
-
-  const getRandomUnassignedRole = () => {
-    const roles = [
-      "Mafia Boss",
-      "Mafioso",
-      "Mafioso",
-      "Sheriff",
-      "Doctor",
-      "Maniac",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson",
-      "Townsperson"
-    ];
-    const usedRoles = players.map(p => p.role);
-    const availableRoles = roles.filter(role => !usedRoles.includes(role));
-    return availableRoles[Math.floor(Math.random() * availableRoles.length)];
+  const loadPlayers = async () => {
+    const { data } = await supabase.from('players').select('*').eq('game_id', gameId);
+    if (data) setPlayers(data);
   };
 
-  const assignRole = async () => {
-    if (!name) return;
-    const role = getRandomUnassignedRole();
-    if (!role) {
-      setMyRole("All roles have been taken.");
-      return;
+  const loadGameInfo = async () => {
+    const { data } = await supabase.from('games').select('phase, status').eq('game_number', gameId).single();
+    if (data) {
+      setPhase(data.phase);
+      setStatus(data.status);
     }
-    await supabase.from('players').insert({
-      name,
-      role,
-      is_assigned: true,
-      game_id: gameId
-    });
-    setMyRole(role);
-    setAssigned(true);
-    localStorage.setItem('name', name);
-    localStorage.setItem('role', role);
   };
 
-  const bgColor = phase === 'day' ? 'bg-blue-100 text-black' : 'bg-gray-900 text-white';
+  const startNewGame = async () => {
+    const newGameId = gameId + 1;
+    await supabase.from('games').insert({ game_number: newGameId, phase: 'day', status: 'waiting' });
+    setGameId(newGameId);
+    setPhase('day');
+    setStatus('waiting');
+    setPlayers([]);
+  };
+
+  const startGame = async () => {
+    await supabase.from('games').update({ status: 'in_progress' }).eq('game_number', gameId);
+    setStatus('in_progress');
+  };
+
+  const endGame = async () => {
+    await supabase.from('games').update({ status: 'completed' }).eq('game_number', gameId);
+    setStatus('completed');
+  };
+
+  const togglePhase = async () => {
+    const newPhase = phase === 'day' ? 'night' : 'day';
+    await supabase.from('games').update({ phase: newPhase }).eq('game_number', gameId);
+    setPhase(newPhase);
+  };
+
+  const checkPassword = () => {
+    if (password === '1357') {
+      setAuthorized(true);
+    } else {
+      alert('Wrong password');
+    }
+  };
 
   return (
-    <div className={`flex flex-col items-center justify-center min-h-screen p-4 text-center ${bgColor}`}>
-      <h1 className="text-3xl font-bold mb-6">Mafia Game</h1>
+    <div className="min-h-screen bg-black text-white flex flex-col items-center p-6 text-center">
+      <h1 className="text-3xl font-bold mb-6">Host Panel</h1>
 
-      <div className="absolute bottom-4 left-4 text-2xl">
-        {phase === 'day' ? '☀️ Day' : '🌙 Night'}
-      </div>
-
-      {!assigned ? (
+      {!authorized ? (
         <div className="w-full max-w-sm">
           <Input
-            type="text"
-            placeholder="Enter your name"
-            className="w-full mb-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            type="password"
+            placeholder="Enter host password"
+            className="mb-2"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
-          <Button className="w-full" onClick={assignRole}>
-            Get My Role
+          <Button className="w-full" onClick={checkPassword}>
+            Access
           </Button>
         </div>
       ) : (
-        <div className="text-center">
-          {myRole && roleInfo[myRole] && (
-            <div className="flex flex-col items-center">
-              <div className="text-6xl mb-4">{roleInfo[myRole].icon}</div>
-              <h2 className="text-4xl font-bold mb-2">{myRole}</h2>
-              <p className="text-lg max-w-xs leading-relaxed">{roleInfo[myRole].description}</p>
-            </div>
-          )}
+        <div className="w-full max-w-md space-y-4">
+          <div className="text-xl">
+            <p>Game #{gameId}</p>
+            <p>Phase: {phase === 'day' ? '☀️ Day' : '🌙 Night'}</p>
+            <p>Status: {status}</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button onClick={togglePhase}>Toggle Day/Night</Button>
+            {status === 'waiting' && <Button onClick={startGame} className="bg-green-600">Start Game</Button>}
+            {status === 'in_progress' && <Button onClick={endGame} className="bg-red-600">End Game</Button>}
+            <Button onClick={startNewGame} className="bg-blue-600">New Game</Button>
+          </div>
+
+          <div className="bg-white text-black rounded p-4">
+            <h2 className="text-lg font-bold mb-2">Players</h2>
+            <ul>
+              {players.map(p => (
+                <li key={p.id} className="text-left mb-1"><strong>{p.name}</strong>: {p.role}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>
