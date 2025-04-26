@@ -13,27 +13,27 @@ const supabase = createClient(
 const roleInfo = {
   "Mafia Boss": {
     icon: "🕴️",
-    description: "Mafia Boss: Each night chooses a player to eliminate. During the day, blends in and votes with others. Wins if the mafia outnumbers the town."
+    description: "Mafia Boss: Each night chooses a player to eliminate. Blend in during the day and vote. Win if mafia outnumbers the town."
   },
   "Mafioso": {
     icon: "🧥",
-    description: "Mafioso: Helps the boss eliminate targets. Votes during the day. Wins with the mafia when the town is outnumbered."
+    description: "Mafioso: Assists the Mafia Boss. Eliminates players at night. Win with mafia when the town is outnumbered."
   },
   "Sheriff": {
     icon: "👮",
-    description: "Sheriff: Investigates one player each night to reveal if they are mafia. Wins with the town if all mafia members are eliminated."
+    description: "Sheriff: Investigates one player each night to determine if they are mafia. Win by eliminating all mafia."
   },
   "Doctor": {
     icon: "🏥",
-    description: "Doctor: Protects one player each night from elimination. Wins with the town if all mafia members are eliminated."
+    description: "Doctor: Each night protects one player from being eliminated. Win by saving the town from mafia."
   },
   "Maniac": {
     icon: "🗡️",
-    description: "Maniac: Each night eliminates a player. Wins if left one-on-one against a Townsperson."
+    description: "Maniac: Kills one player each night. Win if left one-on-one with a Townsperson."
   },
   "Townsperson": {
     icon: "🧑",
-    description: "Townsperson: No night abilities. Discusses and votes during the day. Wins with the town if all mafia members are eliminated."
+    description: "Townsperson: No abilities at night. Discuss and vote during the day. Win if all mafia members are eliminated."
   }
 };
 
@@ -41,7 +41,7 @@ export default function Home() {
   const [players, setPlayers] = useState([]);
   const [assigned, setAssigned] = useState(false);
   const [myRole, setMyRole] = useState<string | null>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
   const [gameId, setGameId] = useState(1);
   const [phase, setPhase] = useState<'day' | 'night'>('day');
 
@@ -60,9 +60,9 @@ export default function Home() {
       .channel('games-phase')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
         if (payload.new) {
-  const data = payload.new as { phase: 'day' | 'night' };
-  setPhase(data.phase);
-}
+          const data = payload.new as { phase: 'day' | 'night' };
+          setPhase(data.phase);
+        }
       })
       .subscribe();
 
@@ -74,13 +74,20 @@ export default function Home() {
   const getRandomUnassignedRole = () => {
     const roles = [
       "Mafia Boss",
-      "Mafioso", "Mafioso",
+      "Mafioso",
+      "Mafioso",
       "Sheriff",
       "Doctor",
       "Maniac",
-      "Townsperson", "Townsperson", "Townsperson",
-      "Townsperson", "Townsperson", "Townsperson",
-      "Townsperson", "Townsperson", "Townsperson"
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson",
+      "Townsperson"
     ];
     const usedRoles = players.map(p => p.role);
     const availableRoles = roles.filter(role => !usedRoles.includes(role));
@@ -110,7 +117,7 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col items-center justify-center min-h-screen p-4 text-center ${bgColor}`}>
-      <h1 className="text-3xl font-bold mb-6">Mafia Game</h1>
+      <h1 className="text-4xl font-bold mb-6">Mafia Game</h1>
 
       <div className="absolute bottom-4 left-4 text-2xl">
         {phase === 'day' ? '☀️ Day' : '🌙 Night'}
@@ -130,12 +137,12 @@ export default function Home() {
           </Button>
         </div>
       ) : (
-        <div className="text-center">
+        <div className="text-center mt-6">
           {myRole && roleInfo[myRole] && (
             <div className="flex flex-col items-center">
-              <div className="text-6xl mb-4">{roleInfo[myRole].icon}</div>
+              <div className="text-7xl mb-4">{roleInfo[myRole].icon}</div>
               <h2 className="text-4xl font-bold mb-2">{myRole}</h2>
-              <p className="text-lg max-w-xs leading-relaxed">{roleInfo[myRole].description}</p>
+              <p className="text-lg max-w-md leading-relaxed">{roleInfo[myRole].description}</p>
             </div>
           )}
         </div>
