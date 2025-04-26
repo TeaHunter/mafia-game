@@ -15,11 +15,13 @@ export default function Host() {
   const [authorized, setAuthorized] = useState(false);
   const [players, setPlayers] = useState([]);
   const [gameId, setGameId] = useState(1);
+  const [phase, setPhase] = useState<'day' | 'night'>('day');
 
   const checkPassword = () => {
     if (password === "1357") {
       setAuthorized(true);
       loadRoles();
+      fetchCurrentPhase();
     } else {
       alert("Wrong password");
     }
@@ -40,9 +42,37 @@ export default function Host() {
       .eq('game_id', gameId);
     if (!error) {
       setPlayers([]);
+      setGameId((prev) => prev + 1);
+      await supabase.from('games').insert({ game_number: gameId + 1, phase: 'day' });
       alert("Game reset successfully.");
     } else {
       alert("Failed to reset game.");
+    }
+  };
+
+  const fetchCurrentPhase = async () => {
+    const { data, error } = await supabase
+      .from('games')
+      .select('phase')
+      .eq('game_number', gameId)
+      .single();
+
+    if (!error && data) {
+      setPhase(data.phase);
+    }
+  };
+
+  const togglePhase = async () => {
+    const newPhase = phase === 'day' ? 'night' : 'day';
+    const { error } = await supabase
+      .from('games')
+      .update({ phase: newPhase })
+      .eq('game_number', gameId);
+
+    if (!error) {
+      setPhase(newPhase);
+    } else {
+      alert("Failed to change phase.");
     }
   };
 
@@ -62,18 +92,24 @@ export default function Host() {
           <Button className="w-full" onClick={checkPassword}>Access Roles</Button>
         </div>
       ) : (
-        <div className="w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-2">Assigned Roles</h2>
-          <ul className="bg-white text-black rounded p-4 mb-4">
+        <div className="w-full max-w-md flex flex-col gap-4">
+          <h2 className="text-xl font-semibold">Game #{gameId}</h2>
+          <p className="text-lg">Current phase: {phase === 'day' ? '☀️ Day' : '🌙 Night'}</p>
+          <div className="flex gap-2">
+            <Button className="bg-blue-600 hover:bg-blue-700 w-full" onClick={togglePhase}>
+              Toggle Day/Night
+            </Button>
+            <Button className="bg-red-600 hover:bg-red-700 w-full" onClick={resetGame}>
+              New Game
+            </Button>
+          </div>
+          <ul className="bg-white text-black rounded p-4">
             {players.map((p) => (
               <li key={p.id} className="mb-1">
                 <strong>{p.name}:</strong> {p.role}
               </li>
             ))}
           </ul>
-          <Button className="w-full bg-red-600 hover:bg-red-700" onClick={resetGame}>
-            Reset Game
-          </Button>
         </div>
       )}
     </div>
