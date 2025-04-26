@@ -1,16 +1,14 @@
 'use client';
 
-import React from 'react';
+import { ButtonHTMLAttributes } from "react";
 
-export function Button({
-  children,
-  className = '',
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {}
+
+export function Button({ children, ...props }: ButtonProps) {
   return (
     <button
-      className={`px-4 py-2 rounded bg-white text-black font-medium ${className}`}
       {...props}
+      className={`px-4 py-2 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition ${props.className || ''}`}
     >
       {children}
     </button>
