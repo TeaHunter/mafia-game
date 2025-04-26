@@ -1,15 +1,14 @@
 'use client';
 
-import React from 'react';
+import { InputHTMLAttributes } from "react";
 
-export function Input({
-  className = '',
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) {
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
+
+export function Input({ ...props }: InputProps) {
   return (
     <input
-      className={`px-3 py-2 rounded border border-gray-300 text-black ${className}`}
       {...props}
+      className={`border p-2 rounded w-full ${props.className || ''}`}
     />
   );
 }
