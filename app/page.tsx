@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import Image from "next/image";
 
 const supabase = createClient(
   'https://otlixcdsstrdwxhzddrz.supabase.co',
@@ -13,28 +12,28 @@ const supabase = createClient(
 
 const roleInfo = {
   "Mafia Boss": {
-    description: "Commands the mafia. Chooses a victim each night.",
-    icon: "/icons/mafia-boss.png"
+    icon: "🕴️",
+    description: "Mafia Boss: Each night chooses a player to eliminate. During the day, blends in and votes with others. Wins if the mafia outnumbers the town."
   },
   "Mafioso": {
-    description: "Member of the mafia. Follows the boss's orders.",
-    icon: "/icons/mafioso.png"
+    icon: "🧥",
+    description: "Mafioso: Helps the boss eliminate targets. Votes during the day. Wins with the mafia when the town is outnumbered."
   },
   "Sheriff": {
-    description: "Each night checks one player to find the mafia.",
-    icon: "/icons/sheriff.png"
+    icon: "👮",
+    description: "Sheriff: Investigates one player each night to reveal if they are mafia. Wins with the town if all mafia members are eliminated."
   },
   "Doctor": {
-    description: "Each night can save one player from being eliminated.",
-    icon: "/icons/doctor.png"
+    icon: "🏥",
+    description: "Doctor: Protects one player each night from elimination. Wins with the town if all mafia members are eliminated."
   },
   "Maniac": {
-    description: "Wins alone by eliminating everyone else.",
-    icon: "/icons/maniac.png"
+    icon: "🗡️",
+    description: "Maniac: Each night eliminates a player. Wins if left one-on-one against a Townsperson."
   },
   "Townsperson": {
-    description: "An ordinary citizen. Votes during the day.",
-    icon: "/icons/townsperson.png"
+    icon: "🧑",
+    description: "Townsperson: No night abilities. Discusses and votes during the day. Wins with the town if all mafia members are eliminated."
   }
 };
 
@@ -47,21 +46,29 @@ export default function Home() {
   const [phase, setPhase] = useState<'day' | 'night'>('day');
 
   useEffect(() => {
-    fetchPhase();
-    const interval = setInterval(fetchPhase, 5000);
-    return () => clearInterval(interval);
-  }, [gameId]);
-
-  const fetchPhase = async () => {
-    const { data, error } = await supabase
-      .from('games')
-      .select('phase')
-      .eq('game_number', gameId)
-      .single();
-    if (!error && data) {
-      setPhase(data.phase);
+    const savedName = localStorage.getItem('name');
+    const savedRole = localStorage.getItem('role');
+    if (savedName && savedRole) {
+      setName(savedName);
+      setMyRole(savedRole);
+      setAssigned(true);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const subscription = supabase
+      .channel('games-phase')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, (payload) => {
+        if (payload.new && payload.new.phase) {
+          setPhase(payload.new.phase);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   const getRandomUnassignedRole = () => {
     const roles = [
@@ -101,13 +108,15 @@ export default function Home() {
     });
     setMyRole(role);
     setAssigned(true);
+    localStorage.setItem('name', name);
+    localStorage.setItem('role', role);
   };
 
   const bgColor = phase === 'day' ? 'bg-blue-100 text-black' : 'bg-gray-900 text-white';
 
   return (
-    <div className={`flex flex-col items-center justify-center min-h-screen p-4 ${bgColor}`}>
-      <h1 className="text-2xl font-bold mb-4">Mafia Role Assignment</h1>
+    <div className={`flex flex-col items-center justify-center min-h-screen p-4 text-center ${bgColor}`}>
+      <h1 className="text-3xl font-bold mb-6">Mafia Game</h1>
 
       <div className="absolute bottom-4 left-4 text-2xl">
         {phase === 'day' ? '☀️ Day' : '🌙 Night'}
@@ -130,13 +139,4 @@ export default function Home() {
         <div className="text-center">
           {myRole && roleInfo[myRole] && (
             <div className="flex flex-col items-center">
-              <Image src={roleInfo[myRole].icon} alt={myRole} width={100} height={100} />
-              <h2 className="text-2xl font-bold mt-2">{myRole}</h2>
-              <p className="mt-2 max-w-xs">{roleInfo[myRole].description}</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+              <div className="text-6xl mb-4">{roleInfo[myRole].icon
